@@ -1,0 +1,10 @@
+{
+  "telegram": {
+    "enabled": false,
+    "bot_token": "PUNE_TOKEN_AICI_DUPA_CREAREA_BOT",
+    "chat_ids": [
+      123456789
+    ],
+    "note": "Pentru a activa Telegram: enabled=true, adaugă token și chat_id real. Vezi GHID_RAPID.md"
+  }
+}

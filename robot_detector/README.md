@@ -1,140 +1,203 @@
-# 🤖 Sistem de Detectare Artefacte cu Robot
+# 📱 APLICAȚIE NOTIFICĂRI MOBILE - ROBOT FLL UNEARTH
 
-Aplicație Python pentru controlul unui robot echipat cu senzor de detecție a obiectelor, care monitorizează continuu mediul și trimite alerte în timp real către arheologi atunci când detectează artefacte.
+Aplicație simplă care trimite notificări instant pe telefon când robotul detectează anomalii arheologice.
 
-## 📋 Caracteristici
+---
 
-- ✅ **Monitorizare în timp real** - Scanare continuă a mediului
-- ✅ **Detectare automată** - Identificare evenimente de detectie
-- ✅ **Sistem de alertare** - Generare și transmitere mesaje către arheologi
-- ✅ **Logging complet** - Salvare toate detectările în fișier log
-- ✅ **Export date** - Export alertelor în format JSON
-- ✅ **Multi-threading** - Procesare asincronă pentru performanță optimă
+## 📋 CE FACE APLICAȚIA?
 
-## 🏗️ Structura Proiectului
+Când robotul SPIKE Prime detectează o anomalie pe teren (movilă sau groapă care poate indica un sit arheologic):
+- ✅ Trimite notificare INSTANT pe telefon
+- ✅ Afișează detalii: tip anomalie, variație, încredere
+- ✅ Vibrație și sunet de alertă
+- ✅ Poți conecta multiple telefoane simultan
+
+**Tehnologie:** Python Flask + WebSocket (comunicare în timp real)
+
+---
+
+## 🚀 INSTALARE ȘI RULARE
+
+### 1. Instalează bibliotecile
+```bash
+pip install flask flask-socketio python-socketio
+```
+
+### 2. Pornește serverul
+```bash
+cd robot_detector
+python mobile_app.py
+```
+
+Va afișa ceva de genul:
+```
+🌐 Adresa ta IP: 192.168.1.100
+📱 Pe telefon accesează: http://192.168.1.100:5000
+```
+
+### 3. Conectează telefonul
+- Pe telefon, conectează-te la **același Wi-Fi** ca PC-ul
+- Deschide **browser** (Chrome/Safari)
+- Accesează adresa afișată: `http://192.168.1.100:5000`
+- **GATA!** Vei primi notificări automat!
+
+---
+
+## 🤖 CONECTARE ROBOT SPIKE PRIME
+
+### Pas 1: Dezactivează simularea
+
+În fișierul `mobile_app.py`, **comentează linia 114:**
+```python
+# threading.Thread(target=simulate_robot, daemon=True).start()
+```
+
+### Pas 2: Trimite notificări din codul robotului
+
+Când robotul detectează o anomalie, apelează funcția `notify_anomaly()`:
+
+```python
+from mobile_app import notify_anomaly
+
+# În codul robotului, când detectezi anomalie:
+notify_anomaly({
+    'anomaly_type': 'MOVILA',        # sau 'GROAPA'
+    'variation': -2.8,                # Variația față de baseline (cm)
+    'corrected_distance': 12.2,       # Distanța corectată (cm)
+    'confidence': 0.92                # Încredere (0-1)
+})
+```
+
+### Pas 3: Exemplu cod robot complet
+
+```python
+from spike import PrimeHub, DistanceSensor
+from math import cos, radians
+import sys
+sys.path.append('C:/Users/Alexa/Desktop/Java/robot_detector')
+from mobile_app import notify_anomaly
+
+hub = PrimeHub()
+distance_sensor = DistanceSensor('A')
+baseline = 15.0  # Distanța medie pe teren plat (cm)
+
+while True:
+    # Citește senzori
+    measured_distance = distance_sensor.get_distance_cm()
+    tilt_angle = hub.motion_sensor.get_pitch_angle()
+    
+    # Compensare tilt: h = d × cos(θ)
+    corrected_distance = measured_distance * cos(radians(abs(tilt_angle)))
+    
+    # Calculează variația
+    variation = corrected_distance - baseline
+    
+    # Detectare anomalie (prag ±2 cm)
+    if abs(variation) > 2.0:
+        anomaly_type = 'MOVILA' if variation < 0 else 'GROAPA'
+        confidence = min(abs(variation) / 5.0, 1.0)  # Încredere bazată pe variație
+        
+        # TRIMITE NOTIFICARE PE TELEFON!
+        notify_anomaly({
+            'anomaly_type': anomaly_type,
+            'variation': variation,
+            'corrected_distance': corrected_distance,
+            'confidence': confidence
+        })
+        
+        # Oprește robot pentru verificare
+        motors.stop()
+        time.sleep(3)
+```
+
+---
+
+## 📱 CE VEI VEDEA PE TELEFON
+
+Când robotul detectează ceva:
+
+1. **Notificare roșie** în colțul din dreapta sus:
+   ```
+   🚨 MOVILA DETECTAT!
+   ```
+
+2. **Card cu detalii:**
+   - 🔺/🕳️ Tip: MOVILA sau GROAPA
+   - 📊 Variație: -2.8 cm (față de teren plat)
+   - 🎯 Încredere: 92%
+   - 📏 Distanță corectată: 12.2 cm
+
+3. **Vibrație telefon** (dacă browser suportă)
+
+4. **Statistici actualizate:**
+   - Total detectări
+   - Ora ultimei detectări
+
+---
+
+## 🔧 STRUCTURA APLICAȚIEI
 
 ```
 robot_detector/
-├── robot.py                   # Clasele Robot și Sensor
-├── notification_system.py     # Sistem de alertare și notificări
-├── detector_app.py           # Aplicația principală
-├── README.md                 # Documentație
-├── detections.log            # Jurnal detectări (generat automat)
-└── alerts_export.json        # Export alertelor (generat automat)
+├── mobile_app.py          ← Server Python (rulează pe PC)
+├── templates/
+│   └── mobile.html        ← Interfață web (se deschide pe telefon)
+├── requirements.txt       ← Biblioteci necesare
+└── README.md             ← Acest fișier
 ```
 
-## 🚀 Cum se folosește
+---
 
-### Instalare
+## ⚠️ IMPORTANT
 
-Nu sunt necesare dependențe externe. Aplicația folosește doar librării standard Python.
+### Pentru ca telefonul să se conecteze:
+- ✅ PC și telefon pe **același Wi-Fi**
+- ✅ Notează **IP-ul** afișat de server
+- ✅ Permite Python prin **firewall Windows**
 
-### Rulare
+### Pentru demo fără robot:
+- Lasă linia 114 necomentată - va simula detectări automat
+- Perfect pentru testare și prezentare FLL!
 
-```bash
-python detector_app.py
-```
+---
 
-### Oprire
+## 💡 AVANTAJE
 
-- Aplicația se oprește automat după 30 secunde
-- Sau apăsați `Ctrl+C` pentru oprire manuală
+| Altă metodă | Aplicația noastră |
+|-------------|-------------------|
+| Telegram (complică) | Browser simplu |
+| Email (întârziere) | Instant (<100ms) |
+| SMS (costă) | Gratis (Wi-Fi) |
+| JSON files (static) | Live updates |
 
-## 🎯 Funcționalități Detaliate
+---
 
-### 1. Robot și Senzor
+## 🏆 PENTRU PREZENTARE FLL
 
-- **Robot**: Se deplasează autonom în mediu
-- **Senzor**: Scanează continuu pentru detectarea obiectelor
-- **Poziționare**: Urmărire poziție în coordonate (X, Y)
+**Mesaj cheie:**
+> "Datorită aplicației noastre, arheologii sunt informați INSTANT 
+> când robotul găsește o anomalie arheologică - pot monitoriza 
+> de la distanță prin telefon, în timp real!"
 
-### 2. Detectare Artefacte
+**Demo:** Pornește serverul → Conectează telefonul → Arată notificările live!
 
-Când senzorul detectează un artefact, aplicația capturează:
-- Tipul artefactului (ceramică, monedă, vas, etc.)
-- Distanța față de robot
-- Poziția exactă
-- Nivel de încredere (confidence)
-- Timestamp-ul detectării
+---
 
-### 3. Sistem de Notificare
+## ❓ PROBLEME FRECVENTE
 
-- **Înregistrare arheologi**: Sistem de management al destinatarilor
-- **Alerte în timp real**: Notificare imediată la detectare
-- **Format vizual**: Mesaje formatate pentru ușurință în citire
-- **Persistență**: Salvare automată în fișier log
+**Q: Telefonul nu se conectează?**
+- Verifică că sunt pe același Wi-Fi
+- Rulează Python ca Administrator
+- Verifică firewall-ul Windows
 
-### 4. Raportare
+**Q: Notificările nu apar?**
+- Reîmprospătează pagina pe telefon
+- Verifică consolă PC - arată "Dispozitiv conectat!"
 
-- Sumar sesiune la final
-- Export date în JSON
-- Statistici detectări
+**Q: Cum opresc simularea?**
+- Comentează linia 114 în `mobile_app.py`
 
-## 📊 Exemplu Output
+---
 
-```
-╔══════════════════════════════════════════════════════════════╗
-║              🚨 ALERTĂ ARTEFACT DETECTAT 🚨                  ║
-╠══════════════════════════════════════════════════════════════╣
-║ ID Alertă:    ALERT-1737676800000                           ║
-║ Robot:        ArcheoBot-X1                                   ║
-║ Timestamp:    2026-01-14 15:30:00                           ║
-║                                                              ║
-║ DETALII ARTEFACT:                                            ║
-║ ├─ Tip:        monedă romană                                ║
-║ ├─ Distanță:   3.45 m                                       ║
-║ ├─ Poziție:    X=2.34, Y=-1.56                             ║
-║ └─ Confidence: 92.0%                                        ║
-╚══════════════════════════════════════════════════════════════╝
-```
+**Aplicație simplă, directă și eficientă! 🎉**
 
-## ⚙️ Configurare
-
-Pentru a modifica parametrii aplicației, editați fișierul `detector_app.py`:
-
-```python
-# Durata rulare (secunde)
-app.run(duration=30)
-
-# Interval scanare (secunde)
-self.scan_interval = 1.0
-```
-
-## 📁 Fișiere Generate
-
-### detections.log
-Jurnal text cu toate detectările:
-```
-2026-01-14T15:30:00 | ALERT-123456 | ArcheoBot-X1 | monedă romană | Poziție: (2.34, -1.56) | Confidence: 0.92
-```
-
-### alerts_export.json
-Export structurat JSON:
-```json
-[
-  {
-    "alert_id": "ALERT-123456",
-    "robot_name": "ArcheoBot-X1",
-    "timestamp": "2026-01-14T15:30:00",
-    "artifact": {
-      "type": "monedă romană",
-      "distance": 3.45,
-      "position": [2.34, -1.56],
-      "confidence": 0.92
-    }
-  }
-]
-```
-
-## 🔧 Extinderi Posibile
-
-1. **Integrare hardware real** - Conectare la senzori fizici
-2. **Notificări email/SMS** - Trimitere alerte prin email sau SMS
-3. **Interfață grafică** - Vizualizare harta și poziții în timp real
-4. **Bază de date** - Stocare date în PostgreSQL/MySQL
-5. **API REST** - Expunere date prin API pentru integrare
-6. **Machine Learning** - Clasificare automată tipuri artefacte
-
-## 📝 Licență
-
-Proiect educațional - Utilizare liberă
