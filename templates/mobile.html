@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🏺 Robot FLL - Detectare Situri</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .status.online {
+            background: rgba(76, 175, 80, 0.8);
+        }
+
+        .status.offline {
+            background: rgba(244, 67, 54, 0.8);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.15);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            text-transform: uppercase;
+        }
+
+        .detections {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .detections h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .detection-card {
+            background: white;
+            color: #333;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .detection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .detection-type {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .detection-type.movila {
+            color: #ff6b6b;
+        }
+
+        .detection-type.groapa {
+            color: #4ecdc4;
+        }
+
+        .detection-time {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .detection-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .detail-item {
+            text-align: center;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .detail-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .detail-label {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .no-detections {
+            text-align: center;
+            padding: 40px;
+            opacity: 0.6;
+        }
+
+        .notification-badge {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff6b6b;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: bold;
+            animation: bounce 0.5s ease-in-out;
+            box-shadow: 0 4px 12px rgba(255,107,107,0.4);
+            z-index: 1000;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Vibration animation */
+        @keyframes vibrate {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .vibrate {
+            animation: vibrate 0.3s ease-in-out 3;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏺 Robot FLL UNearthed</h1>
+        <div class="status" id="status">
+            <span id="status-text">Conectare...</span>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-value" id="total-detections">0</div>
+            <div class="stat-label">Total Detectări</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="last-time">--:--:--</div>
+            <div class="stat-label">Ultima Detectare</div>
+        </div>
+    </div>
+
+    <div class="detections">
+        <h2>📡 Detectări în Timp Real</h2>
+        <div id="detections-list">
+            <div class="no-detections">
+                <p>🤖 Robot în așteptare...</p>
+                <p style="font-size: 14px; margin-top: 10px;">Notificările vor apărea aici automat</p>
+            </div>
+        </div>
+    </div>
+
+    <audio id="alert-sound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjGH0/PRezcHL4HM8t2NOwkcZ7zs56FQEw1Qp+PwtmMcBjiP1vLNeTEFJXjH8N+PQgsUX7Tq66lWFApGn9/zvmwhBjGG0/PRejcHL4HM8t2OOwkcaLzs56FQEg1Qp+PwtmQcBjiP1vLNeS8GJXjI8N+RQQsUYLPp66lXFApGnt/zvmwhBjGG0/PRejcHL4HM8t2OOwkcZ7zs56FQEg1Qp+PwtmMcBjiP1vLNeS8GJXjI8N+RQQsUYLPp66lXFApGnt/zvmwhBjGG0/PRejcHL4HM8t2OOwkcZ7zs56FQEg1Qp+PwtmMcBjiP1vLNeS8GJXjI8N+RQQsUYLPp66lXFApGnt/zvmwhBjGG0/PRejcHL4HM8t2OOwkcZ7zs56FQEg1Qp+PwtmMcBjiP1vLNeS8GJXjI8N+RQQsUYLPp66lXFApGnt/zvmwhBjGG0/PRejcHL4HM8t2OOwkcZ7zs56FQEg1Qp+PwtmMcBjiP1vLNeS8GJXjI8N+RQQsUYLPp66lXFApGnt/zvmwhBjGG0/PRejcHL4HM8t2OOwkcZ7zs56FQEg1Qp+PwtmMcBjiP1vLNeS8GJXjI8N+RQQsUYLPp66lXFApGnt/zvmwhBjGG0/PRejcHL4HM8t2OOwkcZ7zs56FQEg1Qp+PwtmMcBjiP1vLNeS8GJXjI8N+RQQsUYLPp66lXFA==" type="audio/wav">
+    </audio>
+
+    <script>
+        // Conectare la server
+        const socket = io();
+        let totalDetections = 0;
+
+        // Când ne conectăm la server
+        socket.on('connection_status', (data) => {
+            document.getElementById('status').className = 'status online';
+            document.getElementById('status-text').textContent = '✓ Conectat';
+            vibrate();
+        });
+
+        // Când primim o NOUĂ DETECTARE
+        socket.on('new_anomaly', (detection) => {
+            console.log('🚨 NOUĂ DETECTARE:', detection);
+            
+            // Update statistici
+            totalDetections++;
+            document.getElementById('total-detections').textContent = totalDetections;
+            document.getElementById('last-time').textContent = detection.timestamp;
+
+            // Adaugă card detectare
+            addDetectionCard(detection);
+
+            // Afișează notificare
+            showNotification(detection);
+
+            // Vibrație telefon
+            vibrate();
+
+            // Sunet alertă
+            playAlertSound();
+        });
+
+        // Verificare conexiune periodică
+        socket.on('disconnect', () => {
+            document.getElementById('status').className = 'status offline';
+            document.getElementById('status-text').textContent = '✗ Deconectat';
+        });
+
+        function addDetectionCard(detection) {
+            const list = document.getElementById('detections-list');
+            
+            // Șterge mesajul "în așteptare"
+            if (list.querySelector('.no-detections')) {
+                list.innerHTML = '';
+            }
+
+            const card = document.createElement('div');
+            card.className = 'detection-card';
+            
+            const typeClass = detection.type.toLowerCase();
+            const emoji = detection.type === 'MOVILA' ? '🔺' : '🕳️';
+            
+            card.innerHTML = `
+                <div class="detection-header">
+                    <div class="detection-type ${typeClass}">
+                        ${emoji} ${detection.type}
+                    </div>
+                    <div class="detection-time">${detection.timestamp}</div>
+                </div>
+                <div class="detection-details">
+                    <div class="detail-item">
+                        <div class="detail-value">${detection.variation > 0 ? '+' : ''}${detection.variation.toFixed(1)}</div>
+                        <div class="detail-label">Variație (cm)</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-value">${detection.confidence}%</div>
+                        <div class="detail-label">Încredere</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-value">${detection.distance.toFixed(1)}</div>
+                        <div class="detail-label">Distanță (cm)</div>
+                    </div>
+                </div>
+            `;
+            
+            // Adaugă la început (cele mai noi sus)
+            list.insertBefore(card, list.firstChild);
+        }
+
+        function showNotification(detection) {
+            const badge = document.createElement('div');
+            badge.className = 'notification-badge';
+            badge.textContent = `🚨 ${detection.type} DETECTAT!`;
+            document.body.appendChild(badge);
+
+            // Elimină după 3 secunde
+            setTimeout(() => {
+                badge.style.opacity = '0';
+                setTimeout(() => badge.remove(), 300);
+            }, 3000);
+        }
+
+        function vibrate() {
+            // Vibrație telefon (dacă suportă)
+            if ('vibrate' in navigator) {
+                navigator.vibrate([200, 100, 200]);
+            }
+            
+            // Animație vibrație vizuală
+            document.body.classList.add('vibrate');
+            setTimeout(() => {
+                document.body.classList.remove('vibrate');
+            }, 900);
+        }
+
+        function playAlertSound() {
+            const audio = document.getElementById('alert-sound');
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log('Sunet dezactivat:', e));
+        }
+
+        // Previne sleep mode pe telefon
+        let wakeLock = null;
+        if ('wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').then(lock => {
+                wakeLock = lock;
+                console.log('Screen wake lock activat');
+            }).catch(e => console.log('Wake lock nu e suportat'));
+        }
+    </script>
+</body>
+</html>
