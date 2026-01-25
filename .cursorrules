@@ -1,0 +1,46 @@
+# Reguli pentru AI Coding Assistant
+
+## Regula "spike"
+Când lucrezi cu cod pentru LEGO SPIKE Prime:
+
+### API Modern (runloop) - FOLOSEȘTE ACESTA
+```python
+import runloop
+from hub import light_matrix, sound, port, button
+import motor_pair
+import distance_sensor
+
+# Async/await obligatoriu
+async def main():
+    motor_pair.pair(motor_pair.PAIR_1, port.A, port.B)
+    motor_pair.move(motor_pair.PAIR_1, 0, velocity=50)
+    await runloop.sleep_ms(1000)
+    
+runloop.run(main())
+```
+
+### Restricții MicroPython pe SPIKE:
+- ❌ NU folosi f-strings: `f"text {var}"` 
+- ✅ Folosește `.format()`: `"text {}".format(var)`
+- ❌ NU folosi `import time` sau `time.sleep()`
+- ✅ Folosește `await runloop.sleep_ms(1000)`
+- ❌ NU folosi `import urequests` (nu funcționează)
+- ✅ Folosește `print()` pentru comunicare serial
+
+### Configurare Hardware:
+- Port A: Motor stânga (237°)
+- Port E: Motor dreapta (181°)  
+- Port C: Distance Sensor (UltrasonicSensor)
+
+### Motor Pair - Ordinea Inversată:
+```python
+# Pentru mers ÎNAINTE:
+motor_pair.pair(motor_pair.PAIR_1, MOTOR_DREAPTA, MOTOR_STANGA)
+motor_pair.move(motor_pair.PAIR_1, 0, velocity=30)  # steering=0 = drept
+```
+
+### Comunicare Serial (Bluetooth):
+```python
+# Trimite date formatate care pot fi parsate de aplicația Python
+print("ALARMA:{" + '"type":"OBSTACOL","distance":' + str(dist) + "}")
+```
