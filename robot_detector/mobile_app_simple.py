@@ -12,121 +12,61 @@ app = Flask(__name__)
 # Detectări în memorie
 detections = []
 
-HTML_TEMPLATE = '''
-<!DOCTYPE html>
+HTML_TEMPLATE = '''<!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="2">
-    <title>🏺 Robot FLL</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            margin: 0;
-        }
-        .header { text-align: center; margin-bottom: 30px; }
-        .status { 
-            background: rgba(76, 175, 80, 0.8); 
-            padding: 10px; 
-            border-radius: 10px;
-            display: inline-block;
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
-            background: rgba(255,255,255,0.2);
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-        }
-        .stat-value { font-size: 32px; font-weight: bold; }
-        .stat-label { font-size: 12px; opacity: 0.8; }
-        .detection {
-            background: white;
-            color: #333;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-        }
-        .detection-type { font-size: 20px; font-weight: bold; }
-        .movila { color: #ff6b6b; }
-        .groapa { color: #4ecdc4; }
-        .details {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .detail { 
-            background: #f5f5f5; 
-            padding: 10px; 
-            border-radius: 8px;
-            text-align: center;
-        }
-        .detail-value { font-size: 18px; font-weight: bold; color: #667eea; }
-        .detail-label { font-size: 11px; color: #666; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="refresh" content="3">
+<title>Robot FLL</title>
+<style>
+body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:15px;margin:0}
+.header{text-align:center;margin-bottom:20px}
+.status{background:rgba(76,175,80,0.8);padding:10px;border-radius:10px;display:inline-block;margin:10px 0}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.stat-card{background:rgba(255,255,255,0.2);padding:15px;border-radius:10px;text-align:center}
+.stat-value{font-size:28px;font-weight:bold}
+.stat-label{font-size:11px;opacity:0.8}
+.detection{background:white;color:#333;padding:15px;border-radius:10px;margin-bottom:10px}
+.detection-type{font-size:18px;font-weight:bold;margin-bottom:5px}
+.movila{color:#ff6b6b}
+.groapa{color:#4ecdc4}
+.details{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.detail{background:#f5f5f5;padding:8px;border-radius:5px;text-align:center}
+.detail-value{font-size:16px;font-weight:bold;color:#667eea}
+.detail-label{font-size:10px;color:#666}
+.btn{background:rgba(255,255,255,0.3);color:white;border:2px solid white;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:bold;margin-top:10px;width:100%;max-width:200px}
+</style>
 </head>
 <body>
-    <div class="header">
-        <h1>🏺 Robot FLL UNearthed</h1>
-        <div class="status">✓ Conectat (Auto-refresh)</div>
-    </div>
-    
-    <div class="stats">
-        <div class="stat-card">
-            <div class="stat-value">{{ total }}</div>
-            <div class="stat-label">TOTAL DETECTĂRI</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ last_time }}</div>
-            <div class="stat-label">ULTIMA DETECTARE</div>
-        </div>
-    </div>
-    
-    <div>
-        <h3 style="text-align: center;">📡 Detectări în Timp Real</h3>
-        {% if detections %}
-            {% for det in detections %}
-            <div class="detection">
-                <div class="detection-type {{ det.type.lower() }}">
-                    {{ '🔺' if det.type == 'MOVILA' else '🕳️' }} {{ det.type }}
-                </div>
-                <small>{{ det.timestamp }}</small>
-                <div class="details">
-                    <div class="detail">
-                        <div class="detail-value">{{ "%.1f"|format(det.variation) }}</div>
-                        <div class="detail-label">Variație (cm)</div>
-                    </div>
-                    <div class="detail">
-                        <div class="detail-value">{{ det.confidence }}%</div>
-                        <div class="detail-label">Încredere</div>
-                    </div>
-                    <div class="detail">
-                        <div class="detail-value">{{ "%.1f"|format(det.distance) }}</div>
-                        <div class="detail-label">Distanță (cm)</div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div style="text-align: center; padding: 40px; opacity: 0.6;">
-                🤖 Robot în așteptare...<br>
-                <small>Notificările vor apărea aici automat</small>
-            </div>
-        {% endif %}
-    </div>
+<div class="header">
+<h1>🏺 Robot FLL</h1>
+<div class="status">✓ Conectat</div>
+<br>
+<button class="btn" onclick="if(confirm('Stergi TOATE detectarile?'))fetch('/reset').then(function(){location.reload()})">🔄 RESETARE</button>
+</div>
+<div class="stats">
+<div class="stat-card"><div class="stat-value">{{ total }}</div><div class="stat-label">TOTAL DETECTARI</div></div>
+<div class="stat-card"><div class="stat-value">{{ last_time }}</div><div class="stat-label">ULTIMA DETECTARE</div></div>
+</div>
+<h3 style="text-align:center">📡 Detectari in Timp Real</h3>
+{% if detections %}
+{% for det in detections %}
+<div class="detection">
+<div class="detection-type {{ det.type.lower() }}">{{ '🔺' if det.type == 'MOVILA' else '🕳️' }} {{ det.type }}</div>
+<small>{{ det.timestamp }}</small>
+<div class="details">
+<div class="detail"><div class="detail-value">{{ "%.1f"|format(det.variation) }}</div><div class="detail-label">Variatie (cm)</div></div>
+<div class="detail"><div class="detail-value">{{ det.confidence }}%</div><div class="detail-label">Incredere</div></div>
+<div class="detail"><div class="detail-value">{{ "%.1f"|format(det.distance) }}</div><div class="detail-label">Distanta (cm)</div></div>
+</div>
+</div>
+{% endfor %}
+{% else %}
+<div style="text-align:center;padding:40px;opacity:0.6">🤖 Robot in asteptare...<br><small>Notificarile vor aparea aici automat</small></div>
+{% endif %}
 </body>
-</html>
-'''
+</html>'''
 
 @app.route('/')
 def index():
@@ -135,6 +75,13 @@ def index():
                                  detections=list(reversed(detections)), 
                                  total=len(detections),
                                  last_time=last_time)
+
+@app.route('/reset')
+def reset():
+    """Resetare detectări"""
+    detections.clear()
+    print("\n🔄 RESETARE! Toate detectările au fost șterse.")
+    return '{"status": "ok", "message": "Detectări resetate!"}', 200
 
 def notify_anomaly(anomaly_data):
     """Adaugă detectare"""
@@ -168,9 +115,14 @@ if __name__ == '__main__':
     print("🏺 SERVER NOTIFICĂRI MOBILE - VERSIUNE SIMPLIFICATĂ")
     print("="*70)
     print("\n✅ Accesează în browser:")
-    print("   • http://127.0.0.1:5000 (PC)")
-    print("   • http://192.168.0.201:5000 (telefon)")
-    print("\n📱 Pagina se reîmprospătează automat la 2 secunde!")
+    print("   • PC: http://127.0.0.1:5000")
+    print("   • TELEFON: http://192.168.0.201:5000")
+    print("\n📱 IMPORTANT pentru telefon:")
+    print("   1. Conectează telefonul la Wi-Fi-ul ACASĂ")
+    print("   2. Deschide browser (Chrome/Safari)")
+    print("   3. Scrie EXACT în bara de adrese: 192.168.0.201:5000")
+    print("   4. Apasă Enter/Go")
+    print("\n🔄 Auto-refresh la 3 secunde | Resetare automată la pornire")
     print("="*70 + "\n")
     
     threading.Thread(target=simulate_robot, daemon=True).start()
