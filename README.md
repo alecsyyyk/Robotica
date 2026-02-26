@@ -200,4 +200,3 @@ robot_detector/
 ---
 
 **Aplicație simplă, directă și eficientă! 🎉**
-

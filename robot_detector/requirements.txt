@@ -1,6 +1,0 @@
-# Biblioteci necesare pentru aplicația mobilă
-flask
-flask-socketio
-python-socketio
-
-
